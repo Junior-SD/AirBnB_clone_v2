@@ -1,29 +1,24 @@
 #!/usr/bin/env bash
-# Sets up web servers for the deployment of `web_static`
+# bash script that prepares a web server
 
-# Verify nginx is present
-if command -v nginx &> /dev/null; then
-  echo "Nginx already installed."
-else
-  apt-get update
-  apt install -y nginx
+sudo apt update
+sudo apt install nginx -y
+sudo apt upgrade nginx -y
 
-  # Create necessary files
-  mkdir -p /data/web_static/shared
-  mkdir -p /data/web_static/releases/test
-  echo "Hello nginx" > /data/web_static/releases/test/index.html
+sudo mkdir -p /data/web_static/releases/test
+sudo mkdir -p /data/web_static/shared
 
-  # Create sym links to test folder
-  ln -s /data/web_static/releases/test/ /data/web_static/current
+# touch /data/web_static/releases/test/index.html
+echo "test page" | sudo tee /data/web_static/releases/test/index.html > /dev/null
 
-  # Give permissions to user and group `ubuntu`
-  chown -R ubuntu:ubuntu /data/
-
-  # Update nginx to serve content correctly
-  sed -i '/server_name _;/a \
-	location /hbnb_static {\
-		alias /data/web_static/current/;\
-		index index.html index.htm;\n\t}' /etc/nginx/sites-available/default
-  # Restart nginx
-  service nginx restart
+if [ -L /data/web_static/current ]; then # delte symbolic link
+	sudo rm /data/web_static/current
 fi
+
+sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
+
+sudo chown -hR ubuntu:ubuntu /data/
+
+sudo sed -i '38i\\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
+
+sudo service nginx restart

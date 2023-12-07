@@ -1,42 +1,40 @@
 #!/usr/bin/python3
-"""Fabric script that distributes an archive to a web server
-"""
-
-from os.path import exists
+""" Function that compress a folder """
+from datetime import datetime
 from fabric.api import *
+import shlex
+import os
 
-env.hosts = ['35.175.135.46', '100.24.235.105']
+
+env.hosts = ['35.175.134.14', '35.175.129.29']
+env.user = "ubuntu"
 
 
 def do_deploy(archive_path):
-    """Uploads an archive to the /tmp/ dir of the web server
-    uncompress the archive to the dir .... on the web server
-    delete the archive from the web server
-    delete the symbolic link ...
-    create a new symbolic link ...
-
-    Returns:
-        False if the file at the path archive_path doesn't exist
-        otherwise True if all operations succeds
-    """
-    if not exists(archive_path):
+    """ Deploys """
+    if not os.path.exists(archive_path):
         return False
     try:
-        tar_name = archive_path[9:-4]  # without extension
-        tar = archive_path[9:]  # wit extension
-        uncompress_dir = f'/data/web_static/releases/{tar_name}/'
-        put(archive_path, "/tmp/{}".format(tar))
-        # run(f'rm -rf {uncompress_dir}/')
-        run(f'mkdir -p {uncompress_dir}')
-        run("tar -xzf /tmp/{} -C {}".format(tar, uncompress_dir))
-        run("rm /tmp/{}".format(tar))
-        run("mv -f {}web_static/* {}".format(
-            uncompress_dir, uncompress_dir))
-        run("rm -rf /data/web_static/releases/{}/web_static"
-            .format(tar_name))
-        run("rm -rf /data/web_static/current")
-        run(f'ln -s {uncompress_dir} /data/web_static/current')
+        name = archive_path.replace('/', ' ')
+        name = shlex.split(name)
+        name = name[-1]
 
+        wname = name.replace('.', ' ')
+        wname = shlex.split(wname)
+        wname = wname[0]
+
+        releases_path = "/data/web_static/releases/{}/".format(wname)
+        tmp_path = "/tmp/{}".format(name)
+
+        put(archive_path, "/tmp/")
+        run("mkdir -p {}".format(releases_path))
+        run("tar -xzf {} -C {}".format(tmp_path, releases_path))
+        run("rm {}".format(tmp_path))
+        run("mv {}web_static/* {}".format(releases_path, releases_path))
+        run("rm -rf {}web_static".format(releases_path))
+        run("rm -rf /data/web_static/current")
+        run("ln -s {} /data/web_static/current".format(releases_path))
+        print("New version deployed!")
         return True
-    except Exception:
+    except:
         return False
